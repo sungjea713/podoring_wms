@@ -1,0 +1,28 @@
+# Bun
+node_modules/
+bun.lockb
+.env.local
+.env
+
+# Build
+dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Data
+data/wines.csv
+
+# Temporary
+*.tmp
+*.temp

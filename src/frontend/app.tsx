@@ -1,3 +1,9 @@
+// Global polyfill for Supabase (must be first)
+// @ts-ignore
+globalThis.global = globalThis
+// @ts-ignore
+window.global = window
+
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

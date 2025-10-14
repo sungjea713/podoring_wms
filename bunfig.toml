@@ -1,0 +1,7 @@
+[bundle]
+# Inject global polyfill for browser bundles
+define = { "global" = "window" }
+
+[bundle.external]
+# Don't bundle these in browser builds
+preload = []

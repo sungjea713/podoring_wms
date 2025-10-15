@@ -19,16 +19,16 @@
         extend: {
           colors: {
             wine: {
-              50: '#fef2f2',
-              100: '#fee2e2',
-              200: '#fecaca',
-              300: '#fca5a5',
-              400: '#f87171',
-              500: '#ef4444',
-              600: '#dc2626',
-              700: '#b91c1c',
-              800: '#991b1b',
-              900: '#7f1d1d',
+              50: '#fdf2f8',
+              100: '#fce7f3',
+              200: '#fbcfe8',
+              300: '#f9a8d4',
+              400: '#f472b6',
+              500: '#ec4899',
+              600: '#A80569',  // Primary brand color
+              700: '#8a0456',
+              800: '#6d0344',
+              900: '#500233',
             }
           }
         }
@@ -49,22 +49,32 @@
       padding: 0;
       width: 100%;
       height: 100%;
+      /* 모바일에서 텍스트 확대 방지 */
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
     }
 
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+    /* 모바일 터치 최적화 */
+    button, a, input {
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
     }
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #555;
+
+    /* Custom scrollbar (데스크톱에서만) */
+    @media (min-width: 768px) {
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
     }
 
     /* Loading animation */
@@ -82,6 +92,55 @@
     }
     .animate-fade-in {
       animation: fadeIn 0.3s ease-out;
+    }
+
+    /* Slide up animation for modal */
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.3s ease-out;
+    }
+
+    /* Pulse animation for loading */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Grid responsive helper */
+    .wine-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 640px) {
+      .wine-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
+      }
+    }
+
+    /* Smooth scroll */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Focus styles for accessibility */
+    button:focus-visible, a:focus-visible, input:focus-visible {
+      outline: 2px solid #dc2626;
+      outline-offset: 2px;
     }
   </style>
 </head>

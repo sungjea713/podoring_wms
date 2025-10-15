@@ -124,7 +124,7 @@ export function InventoryGrid() {
             <div className="flex mb-2">
               <div className="w-16"></div>
               {[1, 2, 3, 4].map((col) => (
-                <div key={col} className="w-28 text-center text-sm font-medium text-gray-600 mx-1">
+                <div key={col} className="w-36 text-center text-sm font-medium text-gray-600 mx-1">
                   열 {col}
                 </div>
               ))}
@@ -138,7 +138,7 @@ export function InventoryGrid() {
                   {row}행
                 </div>
 
-                {/* Cells */}
+                {/* Cells - 3:2 비율 (144px × 96px) */}
                 {[1, 2, 3, 4].map((col) => {
                   const key = `${activeShelf}-${row}-${col}`
                   const item = inventoryMap?.[key]
@@ -148,8 +148,8 @@ export function InventoryGrid() {
                       key={`${row}-${col}`}
                       onClick={() => handleCellClick(row, col)}
                       className={`
-                        w-28 h-32 m-1 rounded-lg cursor-pointer transition-all
-                        flex flex-col items-center justify-center p-2
+                        w-36 h-24 m-1 rounded-lg cursor-pointer transition-all
+                        flex items-center justify-start p-2
                         ${item
                           ? 'border-2 border-wine-400 bg-wine-50 hover:bg-wine-100'
                           : 'border-2 border-dashed border-gray-300 hover:border-wine-400 hover:bg-wine-50'
@@ -158,8 +158,9 @@ export function InventoryGrid() {
                     >
                       {item ? (
                         <>
+                          {/* 이미지 - 왼쪽 */}
                           {item.wine.image && (
-                            <div className="w-14 h-16 mb-1 flex items-center justify-center overflow-hidden">
+                            <div className="w-12 h-20 flex-shrink-0 mr-2 flex items-center justify-center overflow-hidden">
                               <img
                                 src={item.wine.image}
                                 alt={item.wine.title}
@@ -167,15 +168,18 @@ export function InventoryGrid() {
                               />
                             </div>
                           )}
-                          <span className="text-[10px] font-medium text-gray-700 text-center line-clamp-2 leading-tight">
-                            {item.wine.title}
-                          </span>
-                          <span className="text-[9px] text-gray-500 mt-0.5">
-                            {item.wine.vintage}
-                          </span>
+                          {/* 텍스트 정보 - 오른쪽 */}
+                          <div className="flex-1 flex flex-col justify-center min-w-0">
+                            <span className="text-[11px] font-medium text-gray-700 line-clamp-2 leading-tight mb-0.5">
+                              {item.wine.title}
+                            </span>
+                            <span className="text-[10px] text-gray-500">
+                              {item.wine.vintage}
+                            </span>
+                          </div>
                         </>
                       ) : (
-                        <span className="text-gray-400 text-xs">빈 칸</span>
+                        <span className="text-gray-400 text-xs w-full text-center">빈 칸</span>
                       )}
                     </div>
                   )

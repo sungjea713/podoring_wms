@@ -1,3 +1,4 @@
+import { Wine, Package, AlertTriangle } from 'lucide-react'
 import { useDashboardStats } from '../hooks/useDashboard'
 
 export function Dashboard() {
@@ -19,30 +20,30 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">대시보드</h2>
-        <div className="text-sm text-gray-500">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">대시보드</h2>
+        <div className="text-xs sm:text-sm text-gray-500 hidden sm:block">
           10초마다 자동 갱신
         </div>
       </div>
 
       {/* 주요 통계 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 md:grid-cols-3 gap-2 sm:gap-6">
         <StatCard
-          icon="🍷"
+          icon={<Wine className="w-8 h-8 sm:w-10 sm:h-10" />}
           title="총 와인 종류"
           value={stats.totalWines.toString()}
           description="등록된 와인"
         />
         <StatCard
-          icon="📦"
+          icon={<Package className="w-8 h-8 sm:w-10 sm:h-10" />}
           title="총 재고"
           value={stats.totalStock.toString()}
           description="병"
         />
         <StatCard
-          icon="⚠️"
+          icon={<AlertTriangle className="w-8 h-8 sm:w-10 sm:h-10" />}
           title="재고 부족"
           value={stats.lowStockWines.toString()}
           description="와인 (재고 ≤ 2)"
@@ -50,25 +51,27 @@ export function Dashboard() {
       </div>
 
       {/* 선반별 재고 현황 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
           선반별 재고 현황
         </h3>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {(['A', 'B', 'C'] as const).map((shelf) => (
             <div key={shelf}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700">
                   선반 {shelf}
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className="text-xs sm:text-sm text-gray-500">
                   {stats.shelfStats[shelf].count} / {stats.shelfStats[shelf].max} 칸
-                  ({stats.shelfStats[shelf].percentage}%)
+                  <span className="hidden sm:inline">
+                    {' '}({stats.shelfStats[shelf].percentage}%)
+                  </span>
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3">
                 <div
-                  className={`h-3 rounded-full transition-all ${
+                  className={`h-2 sm:h-3 rounded-full transition-all ${
                     stats.shelfStats[shelf].percentage > 80
                       ? 'bg-red-500'
                       : stats.shelfStats[shelf].percentage > 50
@@ -83,10 +86,10 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 재고 많은 와인 TOP 5 */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
             재고 TOP 5
           </h3>
           {stats.topWines.length > 0 ? (
@@ -126,8 +129,8 @@ export function Dashboard() {
         </div>
 
         {/* 타입별 와인 분포 */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
             타입별 와인 분포
           </h3>
           <div className="flex flex-col items-center">
@@ -226,7 +229,7 @@ export function Dashboard() {
 }
 
 interface StatCardProps {
-  icon: string
+  icon: React.ReactNode
   title: string
   value: string
   description: string
@@ -234,21 +237,21 @@ interface StatCardProps {
 
 function StatCard({ icon, title, value, description }: StatCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center">
-        <div className="flex-shrink-0">
-          <span className="text-4xl">{icon}</span>
+    <div className="bg-white rounded-lg shadow p-3 sm:p-6 hover:shadow-lg transition-shadow">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start">
+        <div className="flex-shrink-0 text-wine-600">
+          {icon}
         </div>
-        <div className="ml-5 w-0 flex-1">
+        <div className="sm:ml-5 w-full sm:w-0 sm:flex-1 text-center sm:text-left mt-2 sm:mt-0">
           <dl>
-            <dt className="text-sm font-medium text-gray-500 truncate">
+            <dt className="text-[10px] sm:text-sm font-medium text-gray-500 truncate">
               {title}
             </dt>
-            <dd className="flex items-baseline">
-              <div className="text-2xl font-semibold text-gray-900">
+            <dd className="flex flex-col sm:flex-row items-center sm:items-baseline">
+              <div className="text-xl sm:text-2xl font-semibold text-gray-900">
                 {value}
               </div>
-              <div className="ml-2 text-sm text-gray-500">
+              <div className="sm:ml-2 text-[10px] sm:text-sm text-gray-500">
                 {description}
               </div>
             </dd>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { Camera, Sparkles } from 'lucide-react'
 import { useAddWine, useUpdateWine } from '../hooks/useWines'
 import type { Wine } from '../types'
 
@@ -383,17 +384,19 @@ export function WineFormModal({ wine, onClose }: WineFormModalProps) {
                     type="button"
                     onClick={handlePhotoCapture}
                     disabled={isGenerating}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-wine-600 to-wine-700 text-white rounded-lg hover:from-wine-700 hover:to-wine-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105"
                   >
-                    📸 사진으로 추가
+                    <Camera className="w-4 h-4" />
+                    사진으로 추가
                   </button>
                   <button
                     type="button"
                     onClick={handleAutoGenerate}
                     disabled={isGenerating}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-all shadow-md hover:shadow-lg hover:scale-105"
                   >
-                    {isGenerating ? '생성 중...' : '🤖 AI 자동 생성'}
+                    <Sparkles className="w-4 h-4" />
+                    {isGenerating ? '생성 중...' : 'AI 자동 생성'}
                   </button>
                 </>
               )}

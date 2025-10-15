@@ -82,6 +82,9 @@
 podoring_wms/
 ├── CLAUDE.md                        # Bun 개발 가이드
 ├── README.md                        # 프로젝트 문서 (이 파일)
+├── DEPLOYMENT.md                    # Railway 배포 가이드
+├── railway.toml                     # Railway 배포 설정
+├── nixpacks.toml                    # Nixpacks 빌드 설정
 ├── .gitignore
 ├── .env.local                       # 환경변수 (로컬)
 ├── .env.example                     # 환경변수 템플릿
@@ -191,9 +194,15 @@ podoring_wms/
 - [x] 대시보드 (6개 섹션: 통계, 선반, TOP 5, 타입별, 국가별, 날짜별)
 - [x] 스타일링 (Tailwind, Lucide icons, 반응형, 브랜드 컬러)
 
-### 🎯 향후 개선 사항 (Phase 11-12)
+### 🎯 향후 개선 사항 (Phase 11)
 - [ ] 전체 기능 테스트 및 버그 수정
-- [ ] Railway 배포
+
+### ✅ Phase 12 완료 - Railway 배포 준비
+- [x] Railway CLI 설치
+- [x] railway.toml 설정 파일 생성
+- [x] nixpacks.toml Bun 빌드 설정
+- [x] .env.example 업데이트 (Google Custom Search API 추가)
+- [x] DEPLOYMENT.md 배포 가이드 작성
 
 ## 🔧 환경 설정
 
@@ -248,26 +257,46 @@ bun run dev
 
 ### Railway 배포
 
+상세한 배포 가이드는 [DEPLOYMENT.md](DEPLOYMENT.md) 참조
+
+#### 빠른 시작 (Railway CLI)
+
 ```bash
-# 1. GitHub에 푸시
-git add .
-git commit -m "Deploy to Railway"
-git push origin main
+# 1. Railway CLI 설치 (macOS)
+brew install railway
 
-# 2. Railway에서 프로젝트 생성
-- New Project → Deploy from GitHub repo
-- 저장소 선택: podoring_wms
+# 2. 로그인
+railway login
 
-# 3. 환경변수 설정 (Railway Dashboard)
-- SUPABASE_URL
-- SUPABASE_ANON_KEY
-- GEMINI_API_KEY
-- GOOGLE_API_KEY
-- GOOGLE_CSE_ID
-- NODE_ENV=production
+# 3. 프로젝트 초기화
+railway init
 
-# 4. 자동 배포 완료
+# 4. 환경 변수 설정
+railway variables set SUPABASE_URL="your_url"
+railway variables set SUPABASE_ANON_KEY="your_key"
+railway variables set GEMINI_API_KEY="your_key"
+railway variables set GOOGLE_API_KEY="your_key"
+railway variables set GOOGLE_CSE_ID="your_cse_id"
+railway variables set NODE_ENV="production"
+
+# 5. 배포
+railway up
+
+# 6. 도메인 생성
+railway domain
 ```
+
+#### GitHub 연동 배포
+
+1. GitHub 저장소에 코드 Push
+2. Railway Dashboard에서 "New Project" → "Deploy from GitHub repo"
+3. 환경 변수 설정 (Settings → Variables)
+4. 자동 배포 완료
+
+**배포 설정 파일**:
+- `railway.toml` - Railway 배포 설정 (healthcheck, restart policy)
+- `nixpacks.toml` - Bun 런타임 설정
+- `.env.example` - 환경 변수 템플릿
 
 ## 📊 API 엔드포인트
 

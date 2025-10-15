@@ -38,7 +38,7 @@ export function useDashboardStats() {
       // 1. 총 와인 종류 및 총 재고
       const { data: wines, error: winesError } = await supabase
         .from('wines')
-        .select('id, title, winery, stock, type, image, country')
+        .select('id, title, winery, stock, type, image, country, created_at')
 
       if (winesError) throw winesError
 

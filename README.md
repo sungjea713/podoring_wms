@@ -10,12 +10,12 @@
 
 1. **와인 관리** (A-데이터베이스)
    - 와인 정보 CRUD (추가, 수정, 삭제, 조회)
-   - 검색, 필터링, 정렬
+   - 검색, 필터링, 정렬 (A-Z 알파벳 순)
    - 21개 필드: 와인명, 빈티지, 품종, 국가, 가격, 평점, 테이스트 노트 등
 
 2. **재고 관리** (B-데이터베이스)
    - 선반별 그리드 뷰 (A/B/C, 각 8행x4열 = 32병)
-   - 재고 위치 추적 (선반, 행, 열)
+   - 재고 위치 추적 (선반, 행, 열) with 위치 고정 기능
    - 실시간 재고 수량 자동 계산
 
 3. **AI 자동 생성 시스템** (4단계 파이프라인)
@@ -25,17 +25,19 @@
    - **Step 3 & 4 (병렬)**: 테이스팅 노트 추출 + 와인 이미지 10개 검색
    - **처리 시간**: 평균 60초, **정확도**: 90-95%
 
-4. **대시보드**
-   - 총 와인 종류 수
-   - 총 재고 병 수
-   - 선반별 재고 현황
-   - 재고 부족 와인 목록
+4. **대시보드** (실시간 자동 갱신 - 10초)
+   - 총 와인 종류, 총 재고, 재고 부족 알림
+   - 선반별 재고 현황 (진행률 바)
+   - 재고 TOP 5 (이미지 포함)
+   - 타입별 와인 분포 (도넛 차트 with 그라데이션)
+   - 국가별 와인 분포 (수평 막대 그래프)
+   - 날짜별 와인 추가 현황 (꺾은선 그래프, 최근 7일)
 
 ## 🏗️ 기술 스택
 
 ### Backend
 - **Runtime**: Bun 1.x
-- **Server**: Bun.serve() (WebSocket, routes)
+- **Server**: Bun.serve() (WebSocket, routes, static file serving)
 - **Database**: Supabase (PostgreSQL)
 - **AI**: Google Gemini 2.5-flash (이미지 분석 + Grounding)
 - **Search**: Google Custom Search API (Vivino URL + 이미지 검색)
@@ -44,11 +46,35 @@
 - **Framework**: React 18 + TypeScript
 - **Styling**: Tailwind CSS (CDN)
 - **State Management**: @tanstack/react-query
+- **Icons**: Lucide React
 - **Build**: Bun's built-in bundler
+- **Responsive**: Mobile-first design
 
 ### Deployment
 - **Server**: Railway
 - **Database**: Supabase Cloud
+
+## 🎨 UI/UX Design
+
+### Color Palette
+- Brand Color: `#A80569` (wine-600)
+- Background: `#EAE8E4` with gradient to `#DDD9D0`
+- Card Background: `#F4F2EF`
+- Header/Nav/Footer: `#F3F1EA` (ivory)
+- Inner Items: `#E6E7EB`
+
+### Chart Colors (Wine-themed)
+- Red wine: `#B05B6C`, White wine: `#D4B97A`, Rosé: `#E8B5B5`
+- Sparkling: `#7A9FBF`, Dessert: `#C89158`
+
+### Features
+- Lucide React icons for modern UI
+- Custom logo and favicon (podoring_wms_logo.png, podoring_icon.png)
+- Responsive donut chart with drop shadow and gradient
+- Interactive line chart with area fill
+- Alphabetical sorting for all lists
+- Price display with thousand separators (₩60,000)
+- Vivino rating with official logo badge
 
 ## 📂 프로젝트 구조
 
@@ -63,7 +89,7 @@ podoring_wms/
 ├── tsconfig.json
 ├── bunfig.toml
 ├── src/
-│   ├── index.ts                     # Bun 서버 엔트리포인트
+│   ├── index.ts                     # Bun 서버 엔트리포인트 + static file serving
 │   ├── db/
 │   │   ├── supabase.ts              # Supabase 클라이언트
 │   │   ├── schema.sql               # DB 스키마
@@ -73,23 +99,29 @@ podoring_wms/
 │   │   ├── google-search.ts         # Google Custom Search (Step 1, 4)
 │   │   └── wines.ts                 # 와인 관련 서버 로직
 │   ├── frontend/
-│   │   ├── index.html               # 메인 HTML
+│   │   ├── index.html               # 메인 HTML + Tailwind config
 │   │   ├── app.tsx                  # React 루트
-│   │   ├── styles.css               # Tailwind CSS
+│   │   ├── polyfill.js              # Supabase polyfill
+│   │   ├── img/                     # Static images
+│   │   │   ├── podoring_wms_logo.png
+│   │   │   └── podoring_icon.png
 │   │   ├── types/
 │   │   │   └── index.ts             # TypeScript 타입
 │   │   ├── components/
-│   │   │   ├── Layout.tsx           # 레이아웃
-│   │   │   ├── Dashboard.tsx        # 대시보드
+│   │   │   ├── Layout.tsx           # 레이아웃 with logo + tabs
+│   │   │   ├── Dashboard.tsx        # 대시보드 with 6 chart sections
 │   │   │   ├── WineList.tsx         # 와인 목록
-│   │   │   ├── WineCard.tsx         # 와인 카드
+│   │   │   ├── WineCard.tsx         # 와인 카드 with Vivino badge
 │   │   │   ├── WineFormModal.tsx    # 와인 폼 + AI 자동 생성
-│   │   │   ├── InventoryGrid.tsx    # 재고 그리드
+│   │   │   ├── InventoryGrid.tsx    # 재고 그리드 (3:2 ratio cards)
 │   │   │   └── InventoryForm.tsx    # 재고 추가
-│   │   └── hooks/
-│   │       ├── useWines.ts          # 와인 데이터 훅
-│   │       ├── useInventory.ts      # 재고 데이터 훅
-│   │       └── useCamera.ts         # 카메라 훅
+│   │   ├── hooks/
+│   │   │   ├── useWines.ts          # 와인 데이터 훅
+│   │   │   ├── useInventory.ts      # 재고 데이터 훅 with position locking
+│   │   │   ├── useDashboard.ts      # 대시보드 통계 (국가별, 날짜별)
+│   │   │   └── useCamera.ts         # 카메라 훅
+│   │   └── lib/
+│   │       └── supabase.ts          # Supabase 클라이언트
 │   └── utils/
 │       ├── imageProcessing.ts       # 이미지 처리
 │       └── validation.ts            # 유효성 검사
@@ -145,76 +177,22 @@ podoring_wms/
 
 **Trigger**: inventory INSERT/DELETE 시 wines.stock 자동 업데이트
 
-### inventory_details 뷰
+## 🚀 개발 현황
 
-```sql
-SELECT
-  i.id, i.wine_id, i.shelf, i.row, i.col,
-  w.title, w.vintage, w.type, w.variety, w.winery, w.image, w.price,
-  i.created_at
-FROM inventory i
-JOIN wines w ON i.wine_id = w.id
-```
+### ✅ 완료된 기능 (Phase 1-10)
+- [x] 프로젝트 초기화
+- [x] Supabase 데이터베이스 설정
+- [x] Bun 서버 구조 (static file serving 포함)
+- [x] React 기본 구조
+- [x] 데이터 마이그레이션
+- [x] 와인 관리 기능 (CRUD, 검색, 필터, A-Z 정렬)
+- [x] 재고 관리 기능 (8x4 그리드, 위치 고정, A-Z 정렬)
+- [x] 카메라 스캔 기능 (AI 4단계 파이프라인)
+- [x] 대시보드 (6개 섹션: 통계, 선반, TOP 5, 타입별, 국가별, 날짜별)
+- [x] 스타일링 (Tailwind, Lucide icons, 반응형, 브랜드 컬러)
 
-## 🚀 구현 단계 (12 Phases)
-
-### Phase 1: 프로젝트 초기화 (5분)
-- [x] CLAUDE.md, README.md
-- [x] package.json, tsconfig.json
-- [x] .gitignore, .env.local, .env.example
-- [x] bun install
-
-### Phase 2: Supabase 데이터베이스 설정 (10분)
-- [ ] schema.sql 실행 (Supabase SQL Editor)
-- [ ] 테이블 생성 확인
-- [ ] src/db/supabase.ts
-
-### Phase 3: Bun 서버 기본 구조 (10분)
-- [ ] src/index.ts (Bun.serve)
-- [ ] src/api/gemini.ts
-- [ ] src/frontend/index.html
-- [ ] src/frontend/types/index.ts
-
-### Phase 4: React 기본 구조 (15분)
-- [ ] src/frontend/app.tsx
-- [ ] src/frontend/components/Layout.tsx
-- [ ] 빈 컴포넌트 (Dashboard, WineList, InventoryGrid)
-
-### Phase 5: 데이터 마이그레이션 (15분)
-- [ ] 구글 시트 CSV 다운로드
-- [ ] src/db/seed.ts
-- [ ] bun run seed 실행
-
-### Phase 6: 와인 관리 기능 (60분)
-- [ ] hooks/useWines.ts
-- [ ] WineList.tsx (목록, 검색, 필터)
-- [ ] WineCard.tsx
-- [ ] WineForm.tsx (추가/수정)
-
-### Phase 7: 재고 관리 기능 (60분)
-- [ ] hooks/useInventory.ts
-- [ ] InventoryGrid.tsx (8x4 그리드)
-- [ ] InventoryForm.tsx
-
-### Phase 8: 카메라 스캔 기능 (60분)
-- [ ] WineScanner.tsx
-- [ ] hooks/useCamera.ts
-- [ ] /api/wines/scan 엔드포인트
-
-### Phase 9: 대시보드 (30분)
-- [ ] Dashboard.tsx
-- [ ] 통계 계산
-
-### Phase 10: 스타일링 (30분)
-- [ ] Tailwind CSS 세부 조정
-- [ ] 반응형 디자인
-
-### Phase 11: 테스트 (20분)
-- [ ] 전체 기능 테스트
-- [ ] 버그 수정
-
-### Phase 12: 배포 (20분)
-- [ ] GitHub push
+### 🎯 향후 개선 사항 (Phase 11-12)
+- [ ] 전체 기능 테스트 및 버그 수정
 - [ ] Railway 배포
 
 ## 🔧 환경 설정
@@ -223,6 +201,7 @@ JOIN wines w ON i.wine_id = w.id
 1. **Supabase**: https://supabase.com
 2. **Railway**: https://railway.app
 3. **Google AI Studio**: https://aistudio.google.com
+4. **Google Cloud Console**: https://console.cloud.google.com (Custom Search API)
 
 ### 환경변수 (.env.local)
 
@@ -272,7 +251,7 @@ bun run dev
 ```bash
 # 1. GitHub에 푸시
 git add .
-git commit -m "Initial commit"
+git commit -m "Deploy to Railway"
 git push origin main
 
 # 2. Railway에서 프로젝트 생성
@@ -283,6 +262,8 @@ git push origin main
 - SUPABASE_URL
 - SUPABASE_ANON_KEY
 - GEMINI_API_KEY
+- GOOGLE_API_KEY
+- GOOGLE_CSE_ID
 - NODE_ENV=production
 
 # 4. 자동 배포 완료
@@ -290,151 +271,13 @@ git push origin main
 
 ## 📊 API 엔드포인트
 
-### AI 자동 생성 시스템 (4단계)
+### AI 자동 생성 시스템
 
-#### POST /api/wines/auto-generate/prestep
-**Pre-Step**: 와인 라벨 사진에서 정보 추출
-
-**Request:**
-```typescript
-FormData {
-  image: File  // JPEG/PNG
-}
-```
-
-**Response:**
-```typescript
-{
-  success: boolean
-  data?: {
-    searchQuery: string  // "Montes Reserva Cabernet Sauvignon 2023 Colchagua Valley Chile"
-    winery?: string      // "Montes"
-  }
-  error?: string
-}
-```
-
-**처리 시간**: 13-17초
-
----
-
-#### POST /api/wines/auto-generate/step1
-**Step 1**: Google Custom Search로 Vivino URL 검색
-
-**Request:**
-```typescript
-{
-  title: string     // Pre-Step의 searchQuery
-  winery?: string   // Pre-Step의 winery
-}
-```
-
-**Response:**
-```typescript
-{
-  success: boolean
-  data?: {
-    vivino_url: string  // "https://www.vivino.com/en/wine/1234567"
-  }
-  error?: string
-}
-```
-
-**처리 시간**: 0.5-0.7초
-
----
-
-#### POST /api/wines/auto-generate/step2
-**Step 2**: Gemini Grounding으로 Vivino 기본 정보 추출 (7개 쿼리)
-
-**Request:**
-```typescript
-{
-  vivinoUrl: string
-}
-```
-
-**Response:**
-```typescript
-{
-  success: boolean
-  data?: {
-    title: string
-    winery: string
-    variety: string | string  // "Cabernet Sauvignon" 또는 "Blend(Cabernet Sauvignon, Merlot)"
-    price: number            // KRW
-    abv: number
-    points: number           // 1.0-5.0
-    country: string
-    province: string | null
-    region_1: string | null
-    region_2: string | null
-    vivino_url: string
-  }
-  error?: string
-}
-```
-
-**처리 시간**: 27-43초 (7개 쿼리 최적화)
-
----
-
-#### POST /api/wines/auto-generate/step3
-**Step 3**: Gemini Grounding으로 와인 특성 추출
-
-**Request:**
-```typescript
-{
-  basicInfo: Step2Response  // Step 2의 결과
-}
-```
-
-**Response:**
-```typescript
-{
-  success: boolean
-  data?: {
-    description: string | null
-    taste: string | null
-    acidity: number | null      // 1-5
-    sweetness: number | null    // 1-5
-    tannin: number | null       // 1-5
-    body: number | null         // 1-5
-    cost_effectiveness: number | null  // 1-5
-  }
-  error?: string
-}
-```
-
-**처리 시간**: 12-18초 (4-5개 쿼리)
-
----
-
-#### POST /api/wines/auto-generate/step4
-**Step 4**: Google Image Search로 와인 이미지 10개 검색
-
-**Request:**
-```typescript
-{
-  title: string
-  winery?: string
-}
-```
-
-**Response:**
-```typescript
-{
-  success: boolean
-  data?: {
-    imageUrls: string[]  // 10개 이미지 URL
-  }
-  error?: string
-}
-```
-
-**처리 시간**: 0.5-0.7초
-
----
+- `POST /api/wines/auto-generate/prestep` - Pre-Step: 이미지 분석 (13-17s)
+- `POST /api/wines/auto-generate/step1` - Step 1: Vivino URL 검색 (0.5-0.7s)
+- `POST /api/wines/auto-generate/step2` - Step 2: 기본 정보 추출 (27-43s, 7 queries)
+- `POST /api/wines/auto-generate/step3` - Step 3: 테이스팅 노트 (12-18s, 4-5 queries)
+- `POST /api/wines/auto-generate/step4` - Step 4: 이미지 검색 (0.5-0.7s)
 
 ### 성능 지표
 
@@ -450,26 +293,24 @@ FormData {
 ## 🎨 UI 구조
 
 ### 메인 화면 (탭 구조)
-- 📊 대시보드
-- 🍷 와인 목록
-- 📦 재고 관리
+- 📊 대시보드 (6개 섹션 with 차트)
+- 🍷 와인 목록 (검색, 필터, A-Z 정렬)
+- 📦 재고 관리 (선반별 3:2 비율 그리드)
 
-### 와인 목록 페이지
-- 검색바
-- 필터 (타입, 국가, 재고 유무)
-- 정렬 (이름, 평점, 가격, 재고)
-- 와인 카드 그리드
-- [📸 사진으로 추가] [🤖 AI 자동 생성] 버튼
-
-### 재고 관리 페이지
-- 선반 선택 탭 (A/B/C)
-- 8행 x 4열 그리드
-- 클릭: 빈 칸 → 와인 추가 / 와인 → 정보 표시 + 제거
-
-### 대시보드
-- 통계 카드 (총 와인, 총 재고, 부족 와인)
-- 선반별 재고 차트
-- 최근 추가 와인
+### 대시보드 레이아웃
+```
+├── Statistics Cards (3 columns)
+│   ├── Total Wines
+│   ├── Total Stock
+│   └── Low Stock Alert
+├── Shelf Status (full width, progress bars)
+├── Grid Row 1 (2 columns)
+│   ├── Top 5 Wines (with images)
+│   └── Wine Type Distribution (Donut chart)
+└── Grid Row 2 (2 columns)
+    ├── Country Distribution (Horizontal bars)
+    └── Date Timeline (Line chart, last 7 days)
+```
 
 ## 🔍 추후 확장 가능성
 
@@ -481,6 +322,8 @@ FormData {
 - [ ] PWA (오프라인 지원)
 - [ ] 사용자 인증 (Supabase Auth)
 - [ ] 판매 통계 및 분석
+- [ ] Excel/CSV 내보내기
+- [ ] 라벨 인쇄 기능
 
 ## 📄 라이선스
 

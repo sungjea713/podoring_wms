@@ -67,18 +67,6 @@ Photo → Pre-Step → Step 1 → Step 2 → (Step 3 & 4 parallel) → Complete 
 - **Time**: 13-17 seconds
 - **File**: `src/api/gemini.ts:preStep_extractFromImage()`
 
-```typescript
-const result = await model.generateContent({
-  contents: [{
-    role: 'user',
-    parts: [
-      { text: prompt },
-      { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }
-    ]
-  }]
-})
-```
-
 #### Step 1: Vivino URL Search
 - **API**: Google Custom Search API
 - **Input**: `searchQuery + "vivino"`
@@ -99,38 +87,86 @@ const result = await model.generateContent({
 - **Time**: 27-43 seconds
 - **File**: `src/api/gemini.ts:step2_extractFromVivino()`
 
-**Critical**: Use explicit query count in prompt to control Grounding queries:
-
-```typescript
-const prompt = `검색 전략 (총 7개 쿼리 사용):
-1. title 검색 (1개 쿼리)
-2. winery 검색 (1개 쿼리)
-...`
-```
-
 #### Step 3 & 4: Parallel Execution
 - **Step 3**: Gemini Grounding for tasting notes (12-18s, 4-5 queries)
 - **Step 4**: Google Image Search for 10 wine images (0.5-0.7s)
 - **Pattern**: `Promise.all([step3(), step4()])` for performance
 
-```typescript
-const [step3Result, step4Result] = await Promise.all([
-  fetch('/api/wines/auto-generate/step3', { ... }),
-  fetch('/api/wines/auto-generate/step4', { ... })
-])
-```
-
-### Query Optimization Best Practices
-
-1. **Explicit Query Count**: Always specify exact number of queries in prompt
-2. **Group Related Fields**: Combine related data (e.g., all regions) in one query
-3. **Avoid Image Search in Grounding**: Use dedicated Google Image Search API instead
-4. **Parallel Independent Tasks**: Run Step 3 & 4 simultaneously
-
 ### Performance Metrics
 
 Total time: ~60 seconds (13s + 0.7s + 43s + max(18s, 0.7s))
 Total queries: ~13 (0 + 1 + 7 + 5 + 1)
+
+## UI/UX Design System
+
+### Color Palette
+- **Brand Color**: `#A80569` (wine-600) - Primary brand color
+- **Background**: `#EAE8E4` with gradient to `#DDD9D0` - Warm beige-gray
+- **Card Background**: `#F4F2EF` - Light beige for main cards
+- **Header/Nav/Footer**: `#F3F1EA` - Ivory tone
+- **Inner Item Boxes**: `#E6E7EB` - Gray tone for nested elements (e.g., TOP 5 wines)
+
+### Chart Colors (Wine-themed palette - Medium tone)
+- **Red wine**: `#B05B6C` - Medium rose red
+- **White wine**: `#D4B97A` - Golden champagne
+- **Rosé wine**: `#E8B5B5` - Rose pink
+- **Sparkling wine**: `#7A9FBF` - Medium sparkling blue
+- **Dessert wine**: `#C89158` - Amber gold
+
+### Icons
+- Using **Lucide React** for all UI icons (modern, open-source, MIT license)
+- Header logo: `src/frontend/img/podoring_wms_logo.png`
+- Favicon: `src/frontend/img/podoring_icon.png`
+
+### Dashboard Features
+1. **Statistics Cards** - Total wines, total stock, low stock alerts with Lucide icons
+2. **Shelf Status** - Visual progress bars for A/B/C shelves with color coding
+3. **Top 5 Wines** - Stock ranking with wine images in styled boxes
+4. **Wine Type Distribution** - Donut chart with drop shadow, thinner ring, gradient center text
+5. **Country Distribution** - Horizontal bar chart with brand color gradient
+6. **Date Timeline** - Line chart showing wine additions over last 7 days with area gradient fill
+
+### Layout Structure
+```
+Dashboard
+├── Stats Cards (3 columns)
+├── Shelf Status (full width)
+├── Grid Row 1 (2 columns)
+│   ├── Top 5 Wines
+│   └── Wine Type Distribution (Donut)
+└── Grid Row 2 (2 columns)
+    ├── Country Distribution (Bars)
+    └── Date Timeline (Line chart)
+```
+
+## Static File Serving
+
+Images are served via custom fetch handler in `src/index.ts`:
+
+```typescript
+Bun.serve({
+  async fetch(req) {
+    const url = new URL(req.url)
+
+    // Serve images from src/frontend/img/
+    if (url.pathname.startsWith('/img/')) {
+      const filePath = `./src/frontend${url.pathname}`
+      const file = Bun.file(filePath)
+      if (await file.exists()) {
+        return new Response(file)
+      }
+      return new Response('Image not found', { status: 404 })
+    }
+
+    return new Response('Not found', { status: 404 })
+  },
+
+  routes: {
+    "/": indexHtml,
+    // ... API routes
+  }
+})
+```
 
 ## Deployment
 

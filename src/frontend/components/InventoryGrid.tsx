@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useInventoryMap, useRemoveFromInventory, useAddToInventory } from '../hooks/useInventory'
 import { useWines } from '../hooks/useWines'
 
@@ -274,9 +275,16 @@ function WineSelectorModal({ shelf, row, col, wines, onClose }: WineSelectorModa
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+  const modalContent = (
+    <div
+      className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center overflow-y-auto p-4"
+      style={{ zIndex: 9999 }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col my-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
@@ -393,4 +401,6 @@ function WineSelectorModal({ shelf, row, col, wines, onClose }: WineSelectorModa
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }

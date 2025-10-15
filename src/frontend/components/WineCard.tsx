@@ -1,12 +1,12 @@
-import React from 'react'
 import type { Wine } from '../types'
 
 interface WineCardProps {
   wine: Wine
+  onEdit?: () => void
   onDelete: () => void
 }
 
-export function WineCard({ wine, onDelete }: WineCardProps) {
+export function WineCard({ wine, onEdit, onDelete }: WineCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       {/* Wine Image */}
@@ -89,6 +89,14 @@ export function WineCard({ wine, onDelete }: WineCardProps) {
             >
               Vivino
             </a>
+          )}
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+            >
+              수정
+            </button>
           )}
           <button
             onClick={onDelete}

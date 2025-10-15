@@ -1,12 +1,16 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useWines, useCountries, useDeleteWine } from '../hooks/useWines'
 import { WineCard } from './WineCard'
+import { WineFormModal } from './WineFormModal'
+import type { Wine } from '../types'
 
 export function WineList() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [countryFilter, setCountryFilter] = useState('')
   const [hasStockFilter, setHasStockFilter] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingWine, setEditingWine] = useState<Wine | null>(null)
 
   const { data: wines, isLoading, error } = useWines({
     search,
@@ -37,11 +41,17 @@ export function WineList() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">와인 목록</h2>
         <div className="flex space-x-3">
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+          <button
+            onClick={() => alert('카메라 스캔 기능은 추후 구현 예정입니다.')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
             <span className="mr-2">📷</span>
             사진으로 추가
           </button>
-          <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-wine-600 hover:bg-wine-700">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-wine-600 hover:bg-wine-700"
+          >
             <span className="mr-2">➕</span>
             수동 추가
           </button>
@@ -148,10 +158,26 @@ export function WineList() {
             <WineCard
               key={wine.id}
               wine={wine}
+              onEdit={() => setEditingWine(wine)}
               onDelete={() => handleDelete(wine.id, wine.title)}
             />
           ))}
         </div>
+      )}
+
+      {/* Add Wine Modal */}
+      {showAddModal && (
+        <WineFormModal
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
+
+      {/* Edit Wine Modal */}
+      {editingWine && (
+        <WineFormModal
+          wine={editingWine}
+          onClose={() => setEditingWine(null)}
+        />
       )}
     </div>
   )

@@ -147,6 +147,9 @@ export function useInventoryMap() {
             image
           )
         `)
+        .order('shelf', { ascending: true })
+        .order('row', { ascending: true })
+        .order('col', { ascending: true })
 
       if (error) throw error
 
@@ -158,6 +161,8 @@ export function useInventoryMap() {
       })
 
       return map
-    }
+    },
+    // 캐시를 5초간 유지하여 불필요한 재조회 방지
+    staleTime: 5000,
   })
 }

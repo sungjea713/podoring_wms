@@ -10,19 +10,17 @@ export function Layout() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#EAE8E4] via-[#EAE8E4] to-[#DDD9D0]">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-ivory-100 shadow-sm border-b border-ivory-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Wine className="w-6 h-6 sm:w-8 sm:h-8 text-wine-600" />
-              <div>
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
-                  Podoring WMS
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-500 hidden xs:block">Wine Management System</p>
-              </div>
+            <div className="flex items-center">
+              <img
+                src="./img/podoring_wms_logo.png"
+                alt="Podoring WMS Logo"
+                className="h-8 sm:h-10 w-auto"
+              />
             </div>
             <div className="text-xs sm:text-sm text-gray-500 hidden md:block">
               {new Date().toLocaleDateString('ko-KR', {
@@ -36,7 +34,7 @@ export function Layout() {
       </header>
 
       {/* Navigation Tabs */}
-      <nav className="bg-white border-b border-gray-200 sticky top-[57px] sm:top-[65px] z-40">
+      <nav className="bg-ivory-100 border-b border-ivory-200 sticky top-[57px] sm:top-[65px] z-40">
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
           <div className="flex space-x-2 sm:space-x-8 overflow-x-auto no-scrollbar">
             <TabButton
@@ -74,7 +72,7 @@ export function Layout() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-8 sm:mt-12">
+      <footer className="bg-ivory-100 border-t border-ivory-200 mt-8 sm:mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <p className="text-center text-xs sm:text-sm text-gray-500">
             © 2025 Podoring WMS. All rights reserved.

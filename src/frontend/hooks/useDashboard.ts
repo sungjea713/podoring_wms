@@ -21,6 +21,14 @@ export interface DashboardStats {
     type: string
     count: number
   }[]
+  winesByCountry: {
+    country: string
+    count: number
+  }[]
+  winesByDate: {
+    date: string
+    count: number
+  }[]
 }
 
 export function useDashboardStats() {
@@ -30,7 +38,7 @@ export function useDashboardStats() {
       // 1. 총 와인 종류 및 총 재고
       const { data: wines, error: winesError } = await supabase
         .from('wines')
-        .select('id, title, winery, stock, type, image')
+        .select('id, title, winery, stock, type, image, country')
 
       if (winesError) throw winesError
 
@@ -49,6 +57,21 @@ export function useDashboardStats() {
         type,
         count
       }))
+
+      // 2-2. 국가별 와인 수
+      const countryCount: Record<string, number> = {}
+      wines.forEach((wine) => {
+        const country = wine.country || 'Unknown'
+        countryCount[country] = (countryCount[country] || 0) + 1
+      })
+
+      const winesByCountry = Object.entries(countryCount)
+        .map(([country, count]) => ({
+          country,
+          count
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10) // TOP 10 국가
 
       // 3. 재고 많은 와인 TOP 5
       const topWines = wines
@@ -95,13 +118,38 @@ export function useDashboardStats() {
         }
       }
 
+      // 5. 날짜별 와인 추가 통계 (최근 7일)
+      const today = new Date()
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(today)
+        date.setDate(date.getDate() - (6 - i))
+        return date.toISOString().split('T')[0]
+      })
+
+      const dateCount: Record<string, number> = {}
+      wines.forEach((wine: any) => {
+        if (wine.created_at) {
+          const wineDate = new Date(wine.created_at).toISOString().split('T')[0]
+          if (last7Days.includes(wineDate)) {
+            dateCount[wineDate] = (dateCount[wineDate] || 0) + 1
+          }
+        }
+      })
+
+      const winesByDate = last7Days.map(date => ({
+        date,
+        count: dateCount[date] || 0
+      }))
+
       return {
         totalWines,
         totalStock,
         lowStockWines,
         shelfStats,
         topWines,
-        winesByType
+        winesByType,
+        winesByCountry,
+        winesByDate
       }
     },
     refetchInterval: 10000 // 10초마다 자동 갱신

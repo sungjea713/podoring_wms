@@ -59,7 +59,7 @@ export function WineList() {
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-[#F4F2EF] rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           {/* Search */}
           <div className="md:col-span-5">
@@ -128,7 +128,7 @@ export function WineList() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="bg-[#F4F2EF] rounded-lg shadow p-12 text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-wine-600"></div>
           <p className="mt-4 text-gray-600">와인 목록을 불러오는 중...</p>
         </div>
@@ -145,7 +145,7 @@ export function WineList() {
 
       {/* Empty State */}
       {wines && wines.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
+        <div className="bg-[#F4F2EF] rounded-lg shadow p-12 text-center text-gray-500">
           <p className="text-lg">검색 결과가 없습니다</p>
           <p className="mt-2">다른 조건으로 검색해보세요</p>
         </div>
@@ -154,14 +154,16 @@ export function WineList() {
       {/* Wine Grid */}
       {wines && wines.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {wines.map((wine) => (
-            <WineCard
-              key={wine.id}
-              wine={wine}
-              onEdit={() => setEditingWine(wine)}
-              onDelete={() => handleDelete(wine.id, wine.title)}
-            />
-          ))}
+          {[...wines]
+            .sort((a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }))
+            .map((wine) => (
+              <WineCard
+                key={wine.id}
+                wine={wine}
+                onEdit={() => setEditingWine(wine)}
+                onDelete={() => handleDelete(wine.id, wine.title)}
+              />
+            ))}
         </div>
       )}
 

@@ -10,6 +10,25 @@ await testConnection()
 Bun.serve({
   port: PORT,
 
+  async fetch(req) {
+    const url = new URL(req.url)
+
+    // 이미지 파일 서빙
+    if (url.pathname.startsWith('/img/')) {
+      const filePath = `./src/frontend${url.pathname}`
+      const file = Bun.file(filePath)
+
+      if (await file.exists()) {
+        return new Response(file)
+      }
+
+      return new Response('Image not found', { status: 404 })
+    }
+
+    // 404 for unmatched routes
+    return new Response('Not found', { status: 404 })
+  },
+
   routes: {
     // 메인 페이지
     "/": indexHtml,

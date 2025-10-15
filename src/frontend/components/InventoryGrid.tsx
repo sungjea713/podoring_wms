@@ -86,7 +86,7 @@ export function InventoryGrid() {
       </div>
 
       {/* Shelf Selector */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-[#F4F2EF] rounded-lg shadow p-4">
         <div className="flex space-x-4">
           <ShelfButton
             shelf="A"
@@ -107,7 +107,7 @@ export function InventoryGrid() {
       </div>
 
       {/* Grid */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-[#F4F2EF] rounded-lg shadow p-6">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
             선반 {activeShelf}
@@ -256,10 +256,12 @@ function WineSelectorModal({ shelf, row, col, wines, onClose }: WineSelectorModa
   const [search, setSearch] = useState('')
   const addToInventory = useAddToInventory()
 
-  const filteredWines = wines.filter((wine) =>
-    wine.title.toLowerCase().includes(search.toLowerCase()) ||
-    wine.winery?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredWines = wines
+    .filter((wine) =>
+      wine.title.toLowerCase().includes(search.toLowerCase()) ||
+      wine.winery?.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }))
 
   const handleSelectWine = async (wineId: number) => {
     try {

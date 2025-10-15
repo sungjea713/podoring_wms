@@ -8,7 +8,7 @@ interface WineCardProps {
 
 export function WineCard({ wine, onEdit, onDelete }: WineCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-200 hover:-translate-y-1">
+    <div className="bg-[#F4F2EF] rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-200 hover:-translate-y-1">
       {/* Wine Image */}
       <div className="aspect-w-3 aspect-h-4 bg-gray-100 relative">
         {wine.image ? (
@@ -63,16 +63,23 @@ export function WineCard({ wine, onEdit, onDelete }: WineCardProps) {
 
         {/* Price and Rating */}
         <div className="mt-2 sm:mt-3 flex items-center justify-between text-xs sm:text-sm">
-          <div>
+          <div className="flex-1">
             {wine.price && (
               <p className="font-semibold text-gray-900 text-xs sm:text-sm">
-                ₩{(wine.price / 1000).toFixed(0)}k
+                ₩{wine.price.toLocaleString()}
               </p>
             )}
             {wine.points && (
-              <p className="text-[10px] sm:text-xs text-yellow-600">
-                ⭐ {wine.points}
-              </p>
+              <div className="flex items-center gap-1 mt-1">
+                <img
+                  src="https://vectorseek.com/wp-content/uploads/2023/10/Vivino-Logo-Vector.svg-.png"
+                  alt="Vivino"
+                  className="h-[10px] sm:h-[14px] w-auto object-contain"
+                />
+                <p className="text-sm sm:text-base font-semibold text-gray-900">
+                  {wine.points}
+                </p>
+              </div>
             )}
           </div>
         </div>

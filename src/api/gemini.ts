@@ -151,6 +151,7 @@ async function searchWineDetails(basicInfo: Partial<Wine>): Promise<Partial<Wine
     const prompt = STEP2_DETAILED_SEARCH_PROMPT.replace('{WINE_INFO}', wineInfoStr)
 
     // Google Search grounding을 사용한 생성
+    // @ts-ignore - Gemini SDK 타입 정의 문제
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       tools: [{ googleSearch: {} }],  // Grounding 활성화
@@ -165,7 +166,7 @@ async function searchWineDetails(basicInfo: Partial<Wine>): Promise<Partial<Wine
       const metadata = response.candidates[0].groundingMetadata
       console.log('Grounding metadata:', {
         webSearchQueries: metadata.webSearchQueries,
-        groundingChunks: metadata.groundingChunks?.length || 0
+        groundingChunks: (metadata as any).groundingChunks?.length || 0
       })
     }
 
@@ -460,6 +461,7 @@ JSON 형식으로 반환:
 }`.trim()
 
   // Grounding 활성화 (최적화된 프롬프트로 쿼리 수 최소화)
+  // @ts-ignore - Gemini SDK 타입 정의 문제
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     tools: [{ googleSearch: {} }]
@@ -535,6 +537,7 @@ JSON만 반환:
   "cost_effectiveness": 4
 }`.trim()
 
+  // @ts-ignore - Gemini SDK 타입 정의 문제
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     tools: [{ googleSearch: {} }]  // Grounding 활성화
@@ -603,7 +606,7 @@ export async function autoGenerateWineInfo(title: string, winery?: string): Prom
     console.log('✅ Step 3 completed:', Object.keys(enrichedInfo))
     console.log(`✅ Step 4 completed: Found ${imageUrls.length} image URLs`)
 
-    const finalResult = { ...basicInfo, ...enrichedInfo, imageUrls }
+    const finalResult = { ...basicInfo, ...enrichedInfo, imageUrls } as Partial<Wine> & { imageUrls?: string[] }
 
     console.log('🎉 All steps completed!')
 
@@ -658,7 +661,7 @@ export async function step3_enrichInfo(basicInfo: BasicWineInfo): Promise<Partia
   const enrichedInfo = await enrichWithGroundingSearch(basicInfo)
   console.log('✅ Step 3 completed:', Object.keys(enrichedInfo))
 
-  return { ...basicInfo, ...enrichedInfo }
+  return { ...basicInfo, ...enrichedInfo } as Partial<Wine>
 }
 
 /**

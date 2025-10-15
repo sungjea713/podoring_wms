@@ -41,6 +41,7 @@ export function useDashboardStats() {
         .select('id, title, winery, stock, type, image, country, created_at')
 
       if (winesError) throw winesError
+      if (!wines) throw new Error('No wines data')
 
       const totalWines = wines.length
       const totalStock = wines.reduce((sum, wine) => sum + (wine.stock || 0), 0)
@@ -92,6 +93,7 @@ export function useDashboardStats() {
         .select('shelf')
 
       if (invError) throw invError
+      if (!inventory) throw new Error('No inventory data')
 
       const maxPerShelf = 32 // 8행 x 4열
       const shelfCount = {

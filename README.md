@@ -18,10 +18,12 @@
    - 재고 위치 추적 (선반, 행, 열)
    - 실시간 재고 수량 자동 계산
 
-3. **AI 카메라 스캔**
-   - 모바일 카메라로 와인 라벨 촬영
-   - Gemini API로 자동 정보 추출 (와인명, 빈티지, 품종 등)
-   - 수정 가능한 폼으로 결과 제공
+3. **AI 자동 생성 시스템** (4단계 파이프라인)
+   - **Pre-Step**: 모바일 카메라로 와인 라벨 촬영 → Gemini 2.5-flash로 이미지 분석
+   - **Step 1**: Google Custom Search API로 Vivino URL 검색
+   - **Step 2**: Gemini Grounding으로 Vivino에서 기본 정보 추출 (7개 쿼리 최적화)
+   - **Step 3 & 4 (병렬)**: 테이스팅 노트 추출 + 와인 이미지 10개 검색
+   - **처리 시간**: 평균 60초, **정확도**: 90-95%
 
 4. **대시보드**
    - 총 와인 종류 수
@@ -35,7 +37,8 @@
 - **Runtime**: Bun 1.x
 - **Server**: Bun.serve() (WebSocket, routes)
 - **Database**: Supabase (PostgreSQL)
-- **AI**: Google Gemini 1.5 Flash
+- **AI**: Google Gemini 2.5-flash (이미지 분석 + Grounding)
+- **Search**: Google Custom Search API (Vivino URL + 이미지 검색)
 
 ### Frontend
 - **Framework**: React 18 + TypeScript
@@ -66,7 +69,8 @@ podoring_wms/
 │   │   ├── schema.sql               # DB 스키마
 │   │   └── seed.ts                  # 데이터 마이그레이션
 │   ├── api/
-│   │   ├── gemini.ts                # Gemini API 클라이언트
+│   │   ├── gemini.ts                # Gemini API (Pre-Step, Step 2, 3)
+│   │   ├── google-search.ts         # Google Custom Search (Step 1, 4)
 │   │   └── wines.ts                 # 와인 관련 서버 로직
 │   ├── frontend/
 │   │   ├── index.html               # 메인 HTML
@@ -79,8 +83,7 @@ podoring_wms/
 │   │   │   ├── Dashboard.tsx        # 대시보드
 │   │   │   ├── WineList.tsx         # 와인 목록
 │   │   │   ├── WineCard.tsx         # 와인 카드
-│   │   │   ├── WineForm.tsx         # 와인 폼
-│   │   │   ├── WineScanner.tsx      # 카메라 스캔
+│   │   │   ├── WineFormModal.tsx    # 와인 폼 + AI 자동 생성
 │   │   │   ├── InventoryGrid.tsx    # 재고 그리드
 │   │   │   └── InventoryForm.tsx    # 재고 추가
 │   │   └── hooks/
@@ -90,8 +93,9 @@ podoring_wms/
 │   └── utils/
 │       ├── imageProcessing.ts       # 이미지 처리
 │       └── validation.ts            # 유효성 검사
-└── data/
-    └── wines.csv                    # 구글 시트 export
+├── data/
+│   └── wines.csv                    # 구글 시트 export
+└── test-photo-to-wine.ts            # AI 자동 생성 통합 테스트
 ```
 
 ## 🗄️ 데이터베이스 스키마
@@ -227,8 +231,12 @@ JOIN wines w ON i.wine_id = w.id
 SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_ANON_KEY=eyJxxx...
 
-# Gemini API
+# Gemini API (Pre-Step, Step 2, 3)
 GEMINI_API_KEY=AIzaSyXxx...
+
+# Google Custom Search API (Step 1, 4)
+GOOGLE_API_KEY=AIzaSyXxx...
+GOOGLE_CSE_ID=your_search_engine_id
 
 # Server
 PORT=3000
@@ -282,8 +290,10 @@ git push origin main
 
 ## 📊 API 엔드포인트
 
-### POST /api/wines/scan
-와인 라벨 이미지를 Gemini API로 분석
+### AI 자동 생성 시스템 (4단계)
+
+#### POST /api/wines/auto-generate/prestep
+**Pre-Step**: 와인 라벨 사진에서 정보 추출
 
 **Request:**
 ```typescript
@@ -297,19 +307,145 @@ FormData {
 {
   success: boolean
   data?: {
-    title: string
-    vintage: number
-    winery: string
-    variety: string
-    country: string
-    region_1: string
-    abv: number
-    type: string
-    confidence: number
+    searchQuery: string  // "Montes Reserva Cabernet Sauvignon 2023 Colchagua Valley Chile"
+    winery?: string      // "Montes"
   }
   error?: string
 }
 ```
+
+**처리 시간**: 13-17초
+
+---
+
+#### POST /api/wines/auto-generate/step1
+**Step 1**: Google Custom Search로 Vivino URL 검색
+
+**Request:**
+```typescript
+{
+  title: string     // Pre-Step의 searchQuery
+  winery?: string   // Pre-Step의 winery
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data?: {
+    vivino_url: string  // "https://www.vivino.com/en/wine/1234567"
+  }
+  error?: string
+}
+```
+
+**처리 시간**: 0.5-0.7초
+
+---
+
+#### POST /api/wines/auto-generate/step2
+**Step 2**: Gemini Grounding으로 Vivino 기본 정보 추출 (7개 쿼리)
+
+**Request:**
+```typescript
+{
+  vivinoUrl: string
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data?: {
+    title: string
+    winery: string
+    variety: string | string  // "Cabernet Sauvignon" 또는 "Blend(Cabernet Sauvignon, Merlot)"
+    price: number            // KRW
+    abv: number
+    points: number           // 1.0-5.0
+    country: string
+    province: string | null
+    region_1: string | null
+    region_2: string | null
+    vivino_url: string
+  }
+  error?: string
+}
+```
+
+**처리 시간**: 27-43초 (7개 쿼리 최적화)
+
+---
+
+#### POST /api/wines/auto-generate/step3
+**Step 3**: Gemini Grounding으로 와인 특성 추출
+
+**Request:**
+```typescript
+{
+  basicInfo: Step2Response  // Step 2의 결과
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data?: {
+    description: string | null
+    taste: string | null
+    acidity: number | null      // 1-5
+    sweetness: number | null    // 1-5
+    tannin: number | null       // 1-5
+    body: number | null         // 1-5
+    cost_effectiveness: number | null  // 1-5
+  }
+  error?: string
+}
+```
+
+**처리 시간**: 12-18초 (4-5개 쿼리)
+
+---
+
+#### POST /api/wines/auto-generate/step4
+**Step 4**: Google Image Search로 와인 이미지 10개 검색
+
+**Request:**
+```typescript
+{
+  title: string
+  winery?: string
+}
+```
+
+**Response:**
+```typescript
+{
+  success: boolean
+  data?: {
+    imageUrls: string[]  // 10개 이미지 URL
+  }
+  error?: string
+}
+```
+
+**처리 시간**: 0.5-0.7초
+
+---
+
+### 성능 지표
+
+| 단계 | 처리 시간 | 쿼리 수 | 설명 |
+|------|----------|---------|------|
+| Pre-Step | 13-17초 | 0 | 이미지 분석 (Gemini 2.5-flash) |
+| Step 1 | 0.5-0.7초 | 1 | Google Search |
+| Step 2 | 27-43초 | 7 | Gemini Grounding (최적화) |
+| Step 3 | 12-18초 | 4-5 | Gemini Grounding |
+| Step 4 | 0.5-0.7초 | 1 | Google Image Search |
+| **합계** | **~60초** | **~13개** | **Step 3 & 4 병렬 처리** |
 
 ## 🎨 UI 구조
 
@@ -323,7 +459,7 @@ FormData {
 - 필터 (타입, 국가, 재고 유무)
 - 정렬 (이름, 평점, 가격, 재고)
 - 와인 카드 그리드
-- [📷 사진으로 추가] [➕ 수동 추가] 버튼
+- [📸 사진으로 추가] [🤖 AI 자동 생성] 버튼
 
 ### 재고 관리 페이지
 - 선반 선택 탭 (A/B/C)

@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import type { Wine } from '../types'
 
+// Note: useAddWine, useUpdateWine, useDeleteWine now use backend API
+// for automatic embedding generation/update/deletion
+
 /**
  * 와인 목록 조회
  */
@@ -68,21 +71,26 @@ export function useWine(id: number) {
 }
 
 /**
- * 와인 추가
+ * 와인 추가 (백엔드 API 사용 - 자동 임베딩 생성)
  */
 export function useAddWine() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (wine: Omit<Wine, 'id' | 'stock' | 'created_at' | 'updated_at'>) => {
-      const { data, error } = await supabase
-        .from('wines')
-        .insert(wine as any)
-        .select()
-        .single()
+      const response = await fetch('/api/wines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(wine)
+      })
 
-      if (error) throw error
-      return data as Wine
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to add wine')
+      }
+
+      const result = await response.json()
+      return result.data as Wine
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wines'] })
@@ -91,22 +99,26 @@ export function useAddWine() {
 }
 
 /**
- * 와인 수정
+ * 와인 수정 (백엔드 API 사용 - 자동 임베딩 재생성)
  */
 export function useUpdateWine() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ id, ...wine }: Partial<Wine> & { id: number }) => {
-      const { data, error } = await (supabase
-        .from('wines')
-        .update(wine as any) as any)
-        .eq('id', id)
-        .select()
-        .single()
+      const response = await fetch(`/api/wines?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(wine)
+      })
 
-      if (error) throw error
-      return data as Wine
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update wine')
+      }
+
+      const result = await response.json()
+      return result.data as Wine
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['wines'] })
@@ -116,19 +128,22 @@ export function useUpdateWine() {
 }
 
 /**
- * 와인 삭제
+ * 와인 삭제 (백엔드 API 사용 - 임베딩 자동 삭제)
  */
 export function useDeleteWine() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase
-        .from('wines')
-        .delete()
-        .eq('id', id)
+      const response = await fetch(`/api/wines?id=${id}`, {
+        method: 'DELETE'
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete wine')
+      }
+
       return id
     },
     onSuccess: () => {

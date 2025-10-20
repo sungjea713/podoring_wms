@@ -33,13 +33,24 @@
    - 국가별 와인 분포 (수평 막대 그래프)
    - 날짜별 와인 추가 현황 (꺾은선 그래프, 최근 7일)
 
+5. **와인 임베딩 & 시맨틱 검색** (RAG 시스템)
+   - OpenAI text-embedding-3-small 모델 사용 (1536 차원)
+   - pgvector extension으로 코사인 유사도 검색
+   - HNSW 인덱스로 빠른 벡터 검색 (Hierarchical Navigable Small World)
+   - 자연어 쿼리로 와인 검색 (영어 쿼리, 평균 응답 시간 0.3-0.5초)
+   - **자동 임베딩 생성**: 와인 추가 시 자동 임베딩 생성 (~0.6초)
+   - **자동 임베딩 업데이트**: 와인 수정 시 자동 재생성
+   - **자동 임베딩 삭제**: 와인 삭제 시 CASCADE로 자동 삭제
+   - 일괄 임베딩 재생성 API (80개 와인 ~60초)
+
 ## 🏗️ 기술 스택
 
 ### Backend
 - **Runtime**: Bun 1.x
 - **Server**: Bun.serve() (WebSocket, routes, static file serving)
-- **Database**: Supabase (PostgreSQL)
+- **Database**: Supabase (PostgreSQL + pgvector)
 - **AI**: Google Gemini 2.5-flash (이미지 분석 + Grounding)
+- **Embeddings**: OpenAI text-embedding-3-small (시맨틱 검색)
 - **Search**: Google Custom Search API (Vivino URL + 이미지 검색)
 
 ### Frontend
@@ -96,10 +107,13 @@ podoring_wms/
 │   ├── db/
 │   │   ├── supabase.ts              # Supabase 클라이언트
 │   │   ├── schema.sql               # DB 스키마
-│   │   └── seed.ts                  # 데이터 마이그레이션
+│   │   ├── seed.ts                  # 데이터 마이그레이션
+│   │   └── migrations/
+│   │       └── 002_wine_embeddings.sql  # pgvector + 임베딩 테이블
 │   ├── api/
 │   │   ├── gemini.ts                # Gemini API (Pre-Step, Step 2, 3)
 │   │   ├── google-search.ts         # Google Custom Search (Step 1, 4)
+│   │   ├── openai.ts                # OpenAI Embeddings API
 │   │   └── wines.ts                 # 와인 관련 서버 로직
 │   ├── frontend/
 │   │   ├── index.html               # 메인 HTML + Tailwind config
@@ -180,6 +194,21 @@ podoring_wms/
 
 **Trigger**: inventory INSERT/DELETE 시 wines.stock 자동 업데이트
 
+### wine_embeddings 테이블 (시맨틱 검색용)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | BIGSERIAL | Primary Key |
+| wine_id | BIGINT | FK (wines.id) UNIQUE |
+| embedding | VECTOR(1536) | OpenAI 임베딩 벡터 |
+| metadata | JSONB | 와인 정보 스냅샷 |
+| created_at | TIMESTAMPTZ | 생성 시각 |
+| updated_at | TIMESTAMPTZ | 수정 시각 |
+
+**Index**: HNSW index on embedding (vector_cosine_ops) - 고속 벡터 검색
+
+**RPC Function**: `match_wines(query_embedding, match_threshold, match_count)` - 코사인 유사도 검색
+
 ## 🚀 개발 현황
 
 ### ✅ 완료된 기능 (Phase 1-10)
@@ -204,6 +233,19 @@ podoring_wms/
 - [x] .env.example 업데이트 (Google Custom Search API 추가)
 - [x] DEPLOYMENT.md 배포 가이드 작성
 
+### ✅ Phase 13 완료 - 와인 임베딩 & 시맨틱 검색 (RAG)
+- [x] pgvector extension 설정
+- [x] wine_embeddings 테이블 생성 (HNSW 인덱스)
+- [x] OpenAI API 통합 (text-embedding-3-small)
+- [x] 시맨틱 검색 API 엔드포인트 (`/api/search/semantic`, 평균 0.3-0.5초)
+- [x] 일괄 임베딩 재생성 API (`/api/embeddings/regenerate`)
+- [x] RPC 함수 `match_wines()` 구현 (코사인 유사도)
+- [x] **와인 CRUD API 자동화** (POST/PUT/DELETE `/api/wines`)
+  - 와인 추가 시 자동 임베딩 생성 (~0.6초)
+  - 와인 수정 시 자동 임베딩 재생성
+  - 와인 삭제 시 CASCADE로 자동 임베딩 삭제
+- [x] 프론트엔드 useWines 훅 업데이트 (Supabase 직접 호출 → 백엔드 API 호출)
+
 ## 🔧 환경 설정
 
 ### 필요한 계정
@@ -211,6 +253,7 @@ podoring_wms/
 2. **Railway**: https://railway.app
 3. **Google AI Studio**: https://aistudio.google.com
 4. **Google Cloud Console**: https://console.cloud.google.com (Custom Search API)
+5. **OpenAI Platform**: https://platform.openai.com (Embeddings API)
 
 ### 환경변수 (.env.local)
 
@@ -225,6 +268,9 @@ GEMINI_API_KEY=AIzaSyXxx...
 # Google Custom Search API (Step 1, 4)
 GOOGLE_API_KEY=AIzaSyXxx...
 GOOGLE_CSE_ID=your_search_engine_id
+
+# OpenAI API (Embeddings)
+OPENAI_API_KEY=sk-proj-xxx...
 
 # Server
 PORT=3000
@@ -241,7 +287,9 @@ bun install
 cp .env.example .env.local
 # .env.local 파일에 실제 키 입력
 
-# 3. Supabase에서 schema.sql 실행
+# 3. Supabase에서 SQL 실행
+# - src/db/schema.sql (기본 스키마)
+# - src/db/migrations/002_wine_embeddings.sql (pgvector + 임베딩 테이블)
 
 # 4. 데이터 마이그레이션
 bun run seed
@@ -249,8 +297,14 @@ bun run seed
 # 5. 개발 서버 시작
 bun run dev
 
-# 6. 브라우저에서 확인
+# 6. 와인 임베딩 생성 (최초 1회)
+# 터미널에서 아래 명령 실행 (서버가 실행 중인 상태에서)
+curl -X POST http://localhost:3000/api/embeddings/regenerate
+
+# 7. 브라우저에서 확인
 # http://localhost:3000
+
+# 💡 이후 와인 추가/수정/삭제 시 임베딩 자동 생성/업데이트/삭제
 ```
 
 ## 📦 배포
@@ -277,6 +331,7 @@ railway variables set SUPABASE_ANON_KEY="your_key"
 railway variables set GEMINI_API_KEY="your_key"
 railway variables set GOOGLE_API_KEY="your_key"
 railway variables set GOOGLE_CSE_ID="your_cse_id"
+railway variables set OPENAI_API_KEY="your_openai_key"
 railway variables set NODE_ENV="production"
 
 # 5. 배포
@@ -308,8 +363,44 @@ railway domain
 - `POST /api/wines/auto-generate/step3` - Step 3: 테이스팅 노트 (12-18s, 4-5 queries)
 - `POST /api/wines/auto-generate/step4` - Step 4: 이미지 검색 (0.5-0.7s)
 
+### 와인 CRUD (자동 임베딩 생성/업데이트/삭제)
+
+- `POST /api/wines` - 와인 추가 + 자동 임베딩 생성 (~0.6초)
+- `PUT /api/wines?id={id}` - 와인 수정 + 자동 임베딩 재생성
+- `DELETE /api/wines?id={id}` - 와인 삭제 + 자동 임베딩 삭제 (CASCADE)
+
+### 시맨틱 검색 (RAG)
+
+- `POST /api/search/semantic` - 자연어 쿼리로 와인 검색 (평균 0.3-0.5초)
+  ```json
+  {
+    "query": "fruity red wine from France",
+    "limit": 20
+  }
+  ```
+  **응답 예시**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "wines": [
+        {
+          "id": 74,
+          "title": "Brunel de La Gardine",
+          "similarity": 0.594193,
+          ...
+        }
+      ],
+      "count": 5
+    }
+  }
+  ```
+
+- `POST /api/embeddings/regenerate` - 모든 와인 임베딩 일괄 재생성 (관리자용, 80개 ~60초)
+
 ### 성능 지표
 
+#### AI 자동 생성 시스템
 | 단계 | 처리 시간 | 쿼리 수 | 설명 |
 |------|----------|---------|------|
 | Pre-Step | 13-17초 | 0 | 이미지 분석 (Gemini 2.5-flash) |
@@ -318,6 +409,15 @@ railway domain
 | Step 3 | 12-18초 | 4-5 | Gemini Grounding |
 | Step 4 | 0.5-0.7초 | 1 | Google Image Search |
 | **합계** | **~60초** | **~13개** | **Step 3 & 4 병렬 처리** |
+
+#### 시맨틱 검색 & 임베딩 시스템
+| 작업 | 처리 시간 | 설명 |
+|------|----------|------|
+| 와인 추가 + 임베딩 생성 | ~0.6초 | OpenAI API 호출 78% |
+| 와인 수정 + 임베딩 재생성 | ~0.6초 | 자동 upsert |
+| 와인 삭제 | ~0.1초 | CASCADE 자동 삭제 |
+| 시맨틱 검색 | 0.3-0.5초 | 쿼리 임베딩 + pgvector 검색 |
+| 일괄 임베딩 재생성 (80개) | ~60초 | 백그라운드 작업 권장 |
 
 ## 🎨 UI 구조
 
@@ -343,6 +443,13 @@ railway domain
 
 ## 🔍 추후 확장 가능성
 
+### 시맨틱 검색 향상
+- [ ] 한국어 검색 지원 (검색어 번역 레이어 추가)
+- [ ] 다국어 임베딩 (multilingual-e5 모델)
+- [ ] 검색어 캐싱 (동일 쿼리 재사용)
+- [ ] 하이브리드 검색 (키워드 + 시맨틱)
+
+### 기타 기능
 - [ ] 다중 매장 지원 (stores 테이블)
 - [ ] 입출고 히스토리 (transactions 테이블)
 - [ ] 바코드 스캔 (ZXing)

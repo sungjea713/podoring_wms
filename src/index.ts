@@ -1,6 +1,8 @@
 import indexHtml from "./frontend/index.html"
 import { analyzeWineImage, validateImageBase64, autoGenerateWineInfo, step1_findVivinoUrl, step2_extractBasicInfo, step3_enrichInfo, step4_searchImages, preStep_extractFromImage } from "./api/gemini"
-import { testConnection } from "./db/supabase"
+import { testConnection, supabase } from "./db/supabase"
+import { generateQueryEmbedding, generateWineEmbedding, generateWineEmbeddingText } from "./api/openai"
+import type { Wine } from "./frontend/types"
 
 const PORT = process.env.PORT || 3000
 
@@ -295,6 +297,338 @@ Bun.serve({
       }
     },
 
+    // API: 와인 추가 (Create Wine with Auto-Embedding)
+    "/api/wines": {
+      POST: async (req) => {
+        try {
+          console.log('🍷 Creating new wine with auto-embedding...')
+
+          const wine = await req.json()
+
+          // 1. Insert wine into database
+          const { data: newWine, error: insertError } = await supabase
+            .from('wines')
+            .insert(wine)
+            .select()
+            .single()
+
+          if (insertError) {
+            throw new Error(`Failed to insert wine: ${insertError.message}`)
+          }
+
+          console.log(`✅ Wine created (ID: ${newWine.id})`)
+
+          // 2. Generate and save embedding
+          try {
+            const embedding = await generateWineEmbedding(newWine)
+
+            const { error: embedError } = await (supabase
+              .from('wine_embeddings')
+              .insert({
+                wine_id: newWine.id,
+                embedding: embedding,
+                metadata: {
+                  title: newWine.title,
+                  winery: newWine.winery,
+                  type: newWine.type,
+                  vintage: newWine.vintage
+                }
+              }) as any)
+
+            if (embedError) {
+              console.error('⚠️  Failed to generate embedding:', embedError.message)
+              // Don't fail the request if embedding fails
+            } else {
+              console.log(`✅ Embedding generated for wine ${newWine.id}`)
+            }
+          } catch (embedError: any) {
+            console.error('⚠️  Embedding generation error:', embedError.message)
+            // Don't fail the request if embedding fails
+          }
+
+          return Response.json({
+            success: true,
+            data: newWine
+          })
+
+        } catch (error: any) {
+          console.error('❌ Wine creation error:', error)
+          return Response.json({
+            success: false,
+            error: error.message || '와인 추가에 실패했습니다'
+          }, { status: 500 })
+        }
+      },
+
+      // Update Wine
+      PUT: async (req) => {
+        try {
+          const url = new URL(req.url)
+          const id = url.searchParams.get('id')
+
+          if (!id) {
+            return Response.json({
+              success: false,
+              error: 'Wine ID is required'
+            }, { status: 400 })
+          }
+
+          console.log(`🔄 Updating wine ${id} with auto-embedding...`)
+
+          const wine = await req.json()
+
+          // 1. Update wine in database
+          const { data: updatedWine, error: updateError } = await supabase
+            .from('wines')
+            .update(wine)
+            .eq('id', id)
+            .select()
+            .single()
+
+          if (updateError) {
+            throw new Error(`Failed to update wine: ${updateError.message}`)
+          }
+
+          console.log(`✅ Wine ${id} updated`)
+
+          // 2. Regenerate embedding
+          try {
+            const embedding = await generateWineEmbedding(updatedWine)
+
+            const { error: embedError } = await (supabase
+              .from('wine_embeddings')
+              .upsert({
+                wine_id: updatedWine.id,
+                embedding: embedding,
+                metadata: {
+                  title: updatedWine.title,
+                  winery: updatedWine.winery,
+                  type: updatedWine.type,
+                  vintage: updatedWine.vintage
+                }
+              }) as any)
+
+            if (embedError) {
+              console.error('⚠️  Failed to regenerate embedding:', embedError.message)
+            } else {
+              console.log(`✅ Embedding regenerated for wine ${id}`)
+            }
+          } catch (embedError: any) {
+            console.error('⚠️  Embedding regeneration error:', embedError.message)
+          }
+
+          return Response.json({
+            success: true,
+            data: updatedWine
+          })
+
+        } catch (error: any) {
+          console.error('❌ Wine update error:', error)
+          return Response.json({
+            success: false,
+            error: error.message || '와인 수정에 실패했습니다'
+          }, { status: 500 })
+        }
+      },
+
+      // Delete Wine
+      DELETE: async (req) => {
+        try {
+          const url = new URL(req.url)
+          const id = url.searchParams.get('id')
+
+          if (!id) {
+            return Response.json({
+              success: false,
+              error: 'Wine ID is required'
+            }, { status: 400 })
+          }
+
+          console.log(`🗑️  Deleting wine ${id}...`)
+
+          // Delete wine (CASCADE will auto-delete embedding)
+          const { error: deleteError } = await supabase
+            .from('wines')
+            .delete()
+            .eq('id', id)
+
+          if (deleteError) {
+            throw new Error(`Failed to delete wine: ${deleteError.message}`)
+          }
+
+          console.log(`✅ Wine ${id} deleted (embedding auto-deleted via CASCADE)`)
+
+          return Response.json({
+            success: true,
+            data: { id: parseInt(id) }
+          })
+
+        } catch (error: any) {
+          console.error('❌ Wine deletion error:', error)
+          return Response.json({
+            success: false,
+            error: error.message || '와인 삭제에 실패했습니다'
+          }, { status: 500 })
+        }
+      }
+    },
+
+    // API: 시맨틱 검색 (Semantic Search with RAG)
+    "/api/search/semantic": {
+      POST: async (req) => {
+        try {
+          console.log('🔍 Semantic search request received')
+
+          const body = await req.json()
+          const { query, limit = 20 } = body
+
+          if (!query || typeof query !== 'string') {
+            return Response.json({
+              success: false,
+              error: '검색어를 입력해주세요'
+            }, { status: 400 })
+          }
+
+          console.log(`📝 Query: "${query}", Limit: ${limit}`)
+
+          // 1. Generate query embedding
+          const queryEmbedding = await generateQueryEmbedding(query)
+          console.log(`✅ Query embedding generated (${queryEmbedding.length} dimensions)`)
+
+          // 2. Perform cosine similarity search using pgvector
+          // @ts-ignore - Supabase RPC type issue
+          const { data: results, error } = await supabase.rpc('match_wines', {
+            query_embedding: queryEmbedding,
+            match_threshold: 0.5,  // Minimum similarity threshold
+            match_count: limit
+          })
+
+          if (error) {
+            console.error('❌ Semantic search error:', error)
+            throw new Error(`Database search failed: ${error.message}`)
+          }
+
+          console.log(`✅ Found ${(results as any[])?.length || 0} matching wines`)
+
+          return Response.json({
+            success: true,
+            data: {
+              wines: (results as any[]) || [],
+              count: (results as any[])?.length || 0
+            }
+          })
+
+        } catch (error: any) {
+          console.error('❌ Semantic search error:', error)
+          return Response.json({
+            success: false,
+            error: error.message || '시맨틱 검색에 실패했습니다'
+          }, { status: 500 })
+        }
+      }
+    },
+
+    // API: 임베딩 일괄 재생성 (Batch Regenerate Embeddings)
+    "/api/embeddings/regenerate": {
+      POST: async (req) => {
+        try {
+          console.log('🔄 Starting batch embedding regeneration...')
+
+          // 1. Fetch all wines from database
+          const { data: wines, error: fetchError } = await supabase
+            .from('wines')
+            .select('*')
+            .order('id')
+
+          if (fetchError) {
+            throw new Error(`Failed to fetch wines: ${fetchError.message}`)
+          }
+
+          if (!wines || wines.length === 0) {
+            return Response.json({
+              success: true,
+              message: 'No wines found in database',
+              data: { processed: 0, failed: 0 }
+            })
+          }
+
+          console.log(`📊 Processing ${wines.length} wines...`)
+
+          // 2. Generate embeddings for each wine
+          let processed = 0
+          let failed = 0
+          const errors: { wine_id: number; error: string }[] = []
+
+          for (const wine of wines as Wine[]) {
+            try {
+              console.log(`[${processed + failed + 1}/${wines.length}] Processing wine ID ${wine.id}: ${wine.title}`)
+
+              // Generate embedding text
+              const embeddingText = generateWineEmbeddingText(wine)
+
+              // Generate embedding vector
+              const embedding = await generateWineEmbedding(wine)
+
+              // Upsert to wine_embeddings table
+              // @ts-ignore - Supabase type issue with wine_embeddings
+              const { error: upsertError } = await supabase
+                .from('wine_embeddings')
+                .upsert({
+                  wine_id: wine.id,
+                  embedding: embedding,
+                  metadata: {
+                    title: wine.title,
+                    winery: wine.winery,
+                    type: wine.type,
+                    vintage: wine.vintage,
+                    embedding_text_length: embeddingText.length
+                  },
+                  updated_at: new Date().toISOString()
+                }, {
+                  onConflict: 'wine_id'
+                })
+
+              if (upsertError) {
+                throw new Error(`Upsert failed: ${upsertError.message}`)
+              }
+
+              processed++
+              console.log(`✅ Wine ID ${wine.id} processed successfully`)
+
+              // Add small delay to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 100))
+
+            } catch (error: any) {
+              failed++
+              const errorMsg = error.message || 'Unknown error'
+              console.error(`❌ Failed to process wine ID ${wine.id}:`, errorMsg)
+              errors.push({ wine_id: wine.id, error: errorMsg })
+            }
+          }
+
+          console.log(`✅ Batch regeneration complete: ${processed} processed, ${failed} failed`)
+
+          return Response.json({
+            success: true,
+            message: `Processed ${processed} wines, ${failed} failed`,
+            data: {
+              total: wines.length,
+              processed,
+              failed,
+              errors: errors.slice(0, 10)  // Return first 10 errors
+            }
+          })
+
+        } catch (error: any) {
+          console.error('❌ Batch regeneration error:', error)
+          return Response.json({
+            success: false,
+            error: error.message || '임베딩 재생성에 실패했습니다'
+          }, { status: 500 })
+        }
+      }
+    },
+
     // Health check
     "/api/health": {
       GET: () => {
@@ -303,7 +637,8 @@ Bun.serve({
           timestamp: new Date().toISOString(),
           services: {
             database: 'connected',
-            gemini: 'configured'
+            gemini: 'configured',
+            openai: process.env.OPENAI_API_KEY ? 'configured' : 'not configured'
           }
         })
       }

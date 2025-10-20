@@ -2,6 +2,7 @@ import indexHtml from "./frontend/index.html"
 import { analyzeWineImage, validateImageBase64, autoGenerateWineInfo, step1_findVivinoUrl, step2_extractBasicInfo, step3_enrichInfo, step4_searchImages, preStep_extractFromImage } from "./api/gemini"
 import { testConnection, supabase } from "./db/supabase"
 import { generateQueryEmbedding, generateWineEmbedding, generateWineEmbeddingText } from "./api/openai"
+import { rerankWines } from "./api/cohere"
 import type { Wine } from "./frontend/types"
 
 const PORT = process.env.PORT || 3000
@@ -473,14 +474,14 @@ Bun.serve({
       }
     },
 
-    // API: 시맨틱 검색 (Semantic Search with RAG)
+    // API: 시맨틱 검색 (Semantic Search with RAG + Cohere Reranking)
     "/api/search/semantic": {
       POST: async (req) => {
         try {
           console.log('🔍 Semantic search request received')
 
           const body = await req.json()
-          const { query, limit = 20 } = body
+          const { query, limit = 3 } = body
 
           if (!query || typeof query !== 'string') {
             return Response.json({
@@ -495,12 +496,13 @@ Bun.serve({
           const queryEmbedding = await generateQueryEmbedding(query)
           console.log(`✅ Query embedding generated (${queryEmbedding.length} dimensions)`)
 
-          // 2. Perform cosine similarity search using pgvector
+          // 2. Perform cosine similarity search using pgvector (broad retrieval)
+          // Fetch more candidates (50) with lower threshold (0.3) for reranking
           // @ts-ignore - Supabase RPC type issue
           const { data: results, error } = await supabase.rpc('match_wines', {
             query_embedding: queryEmbedding,
-            match_threshold: 0.5,  // Minimum similarity threshold
-            match_count: limit
+            match_threshold: 0.3,  // Lower threshold for broader retrieval
+            match_count: 50         // Fetch 50 candidates for reranking
           })
 
           if (error) {
@@ -508,13 +510,19 @@ Bun.serve({
             throw new Error(`Database search failed: ${error.message}`)
           }
 
-          console.log(`✅ Found ${(results as any[])?.length || 0} matching wines`)
+          console.log(`✅ Found ${(results as any[])?.length || 0} candidate wines from pgvector`)
+
+          // 3. Rerank using Cohere Rerank API
+          const candidates = (results as Wine[]) || []
+          const rerankedWines = await rerankWines(query, candidates, limit)
+
+          console.log(`✅ Reranked to top ${rerankedWines.length} wines`)
 
           return Response.json({
             success: true,
             data: {
-              wines: (results as any[]) || [],
-              count: (results as any[])?.length || 0
+              wines: rerankedWines,
+              count: rerankedWines.length
             }
           })
 
